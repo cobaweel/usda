@@ -1,4 +1,4 @@
-import pickle, json, collections
+import pickle, json, collections, csv, gzip
 
 # Copyright (c) 2014 Jaap Weel
 
@@ -94,8 +94,11 @@ class Schema(object):
     def read(self):
         record_by_key_by_table = {}
         for table, specs in self.specs_by_table.iteritems():
+            print 'read', table
             record_by_key = {}
+            auto_inc = 0
             for line in open('data/%s.txt' % table):
+                auto_inc += 1
                 line = line.rstrip()
                 record = {}
                 key = []
@@ -103,9 +106,11 @@ class Schema(object):
                     field = field.strip('~')
                     if spec.isprimary:
                         key.append(spec.parse(field))
-                    else:
-                        record[spec.name] = spec.parse(field)
+                    record[spec.name] = spec.parse(field)
                 key = ':'.join(key)
+                if key == '': key = auto_inc
+                if key in record_by_key: print table, 'duplicate %r' % key
+                assert key not in record_by_key
                 record_by_key[key] = record
             record_by_key_by_table[table] = record_by_key
         return record_by_key_by_table
@@ -128,8 +133,10 @@ class _:
     schema.real('FOOD_DES','CHO_Factor').null()
     schema.text('FD_GROUP','FdGrp_Cd').primary()
     schema.text('FD_GROUP','FdGrp_Desc')
+    schema.text('LANGUAL','NDB_No').primary()
+    schema.text('LANGUAL','Factor_Code').primary()
     schema.text('NUT_DATA','NDB_No').primary()
-    schema.text('NUT_DATA','Nutr_No')
+    schema.text('NUT_DATA','Nutr_No').primary()
     schema.real('NUT_DATA','Nutr_Val')
     schema.real('NUT_DATA','Num_Data_Pts')
     schema.real('NUT_DATA','Std_Error').null()
@@ -157,7 +164,7 @@ class _:
     schema.text('DERIV_CD', 'Deriv_Cd').primary()
     schema.text('DERIV_CD', 'Deriv_Desc')
     schema.text('WEIGHT', 'NDB_No').primary()
-    schema.text('WEIGHT', 'Seq')
+    schema.text('WEIGHT', 'Seq').primary()
     schema.real('WEIGHT', 'Amount')
     schema.text('WEIGHT', 'Msre_Desc')
     schema.real('WEIGHT', 'Gm_wgt')
@@ -182,5 +189,16 @@ class _:
     schema.text('DATA_SRC', 'End_Page').null()
 
     usda = schema.read()
-    pickle.dump(usda, open('usda.pickle', 'w'))
-    json.dump(usda, open('usda.json', 'w'), encoding='latin_1')
+
+    for table, specs in schema.specs_by_table.iteritems():
+        print 'csv', table
+        writer = csv.writer(gzip.open('usda-%s.csv.gz' % table, 'w'))
+        writer.writerow([spec.name for spec in specs])
+        for record in usda[table].itervalues():
+            writer.writerow([record[spec.name] for spec in specs])
+        
+    print 'pickle'
+    pickle.dump(usda, gzip.open('usda.pickle.gz', 'w'))
+    
+    print 'json'
+    json.dump(usda, gzip.open('usda.json.gz', 'w'), encoding='latin_1')
