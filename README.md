@@ -2,13 +2,16 @@ USDA Nutrient Database Release 26
 =================================
 
 The USDA Nutrient database comes in a very odd file format. This
-project contains a Python script that transforms it into a Python
-"pickle" file and a JSON file, as well as the resulting files.
+project contains a Python script that transforms it into a number of
+useful file formats. It also includes the results of that
+transformation, so you don't have to do it yourself.
 
+Formats currently available:
 
-I have skipped the "abbreviated file", which is simply a flattening
-(denormalization) of a subset of what the other files contain into a
-single table, and the 
+   * CSV (According to Python's idea of "Excel dialect")
+   * JSON
+   * Python pickle file
+   * SQLITE3 database
 
 The original source for the whole thing is:
 
